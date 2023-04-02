@@ -1,0 +1,6 @@
+Flask==2.2.0
+mysql-connector-python
+gunicorn
+pytest
+bcrypt
+jwt[crypto]

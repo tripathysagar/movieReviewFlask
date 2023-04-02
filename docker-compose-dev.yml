@@ -1,0 +1,44 @@
+version: "3.8"
+services:
+  db:
+    container_name: db
+    image: mysql:8.0
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=Movie_Sys
+    networks:
+      - backend
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 --password=root --silent']
+      interval: 3s
+      retries: 5
+      start_period: 30s
+
+  flask-app:
+    container_name: flask-app
+    build: ./flaskSRC
+    ports:
+      - 5000:5000
+    volumes:
+      - ./flaskSRC:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    environment:
+      - FLASK_ENV=FLASK_DEBUG
+      - SECRET=daft_punk
+      - SALT=salt
+    #command: gunicorn -b 0.0.0.0:5000 app:app
+  
+
+networks:
+  backend:
+
+volumes:
+  mysql:
