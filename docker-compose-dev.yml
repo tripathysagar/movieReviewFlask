@@ -31,7 +31,7 @@ services:
     networks:
       - backend
     environment:
-      - FLASK_ENV=FLASK_DEBUG
+      - FLASK_ENV=development
       - SECRET=daft_punk
       - SALT=salt
     #command: gunicorn -b 0.0.0.0:5000 app:app

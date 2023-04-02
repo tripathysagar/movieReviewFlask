@@ -17,13 +17,55 @@ def printInfoLog(msg):
 def printErrorLog(msg):
     return app.logger.error(msg)
 
-def getError(msg):
+def getJSON(type, msg):
     return jsonify(
-        {"error": msg}
+        {type: msg}
     )
 
+def existKeyRequest(keys, req):
+    for key in keys:
+        if key not in req.keys():
+            return getJSON( "error"," getting unwanted fields")
+                
+        if  req[key] == '':
+            return getJSON("error", " missing mandatory fields")
+                
 
+@app.route("/signIn",  methods=["POST"])
+def handleSignIN():
+    global conection 
+    app.logger.info(f'{conection}')
+    if request.method == "POST":
+        req =None
+        content_type = request.headers.get('Content-Type')
+        
+        if (content_type == 'application/json'):
+            req = request.json
+        else:
+            req = dict(request.form)
+        
+        resp =  existKeyRequest(['username', 'password'], req)
+        if resp:
+            return resp,400
+        
+        accountExist, err = conection.findUserByUsername(req['username'])
+        if err:
+            printErrorLog(err)
+            return getJSON("error"," DB issue, Try again"), 500
+        
+        if accountExist == []: #username is not present in DB
+            printErrorLog(f"username isnot present in db{req['username']}")
+            return getJSON("error"," invalid input "), 400
+        printInfoLog(f'{req} \n {accountExist}')
+        #username is present in DB
+        validPassword = check_password_hash(accountExist[0][1],  req['password'])
 
+        if validPassword: #valid password
+            return getJSON("msg", " voila user in !!!!"), 200
+        
+        #invalid password
+        return getJSON("error"," invalid input "), 400
+        
 
 @app.route("/signUp", methods=["POST", "GET"])
 def handleSignUp():
@@ -37,14 +79,8 @@ def handleSignUp():
         else:
             req = dict(request.form)
 
-        resp, err = None, None
-        for key in ['username', 'password', 'age', 'gender']:
-            if key not in req.keys():
-                resp = getError( " getting unwanted fields")
-                break
-            if  req[key] == '':
-                resp = getError( " missing mandatory fields")
-                break
+        resp =  existKeyRequest(['username', 'password', 'age', 'gender'], req)
+            
         
         if resp:
             return resp,400
@@ -54,42 +90,31 @@ def handleSignUp():
             
         except Exception as e:
             printErrorLog(e)
-            return getError(" invalid input")[0], 400
+            return getJSON("error"," invalid input"), 400
         
         accountExist, err = conection.findUserByUsername(req['username'])
         if err:
             printErrorLog(err)
-            return getError(" DB issue, Try again"), 500
+            return getJSON("error"," DB issue, Try again"), 500
         
         if accountExist == []: #username is not present in DB then we need to inser username
             err = conection.insertAccount(req) 
             if err:
                 printErrorLog(err)
-                return getError(" DB issue, Try again"), 500
+                return getJSON("error"," DB issue, Try again"), 500
     
         
 
         else:
             printErrorLog("username is already present")
-            return getError("  Username taken"), 400
+            return getJSON("error","  Username taken"), 400
             
         
         
-        #getError(err)
+        #getJSON(err)
         return req
     
     
     
     #app.logger.info(f'{conection}')
     return render_template("signUp.html")
-
-
-@app.route("/user/<string:name>")
-def getUserByUsername(name):
-    global conection 
-    if request.method == "GET":
-        app.logger.info(f'{name}')
-        
-        return conection.findUserByUsername(name)
-
-
